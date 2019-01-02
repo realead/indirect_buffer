@@ -1,3 +1,3 @@
 __version__=(0,1,0)
 
-from .buffer_impl import Buffer2d
+from .buffer_impl import IndirectMemory2D
