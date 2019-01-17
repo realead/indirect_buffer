@@ -10,7 +10,7 @@ USE_CYTHON = True
 
 extensions = Extension(
             name='indirect_buffer.buffer_impl',
-            sources = ["indirect_buffer/buffer_impl.pyx"]
+            sources = ["src/indirect_buffer/buffer_impl.pyx"]
     )
 
 if USE_CYTHON:
@@ -22,7 +22,8 @@ kwargs = {
       'description':'a buffer for indirect memory layouts',
       'author':'Egor Dranischnikow',
       'url':'https://github.com/realead/indirect_buffer',
-      'packages':find_packages(),
+      'packages':find_packages(where='src'),
+      'package_dir':{"": "src"},
       'license': 'MIT',
       'ext_modules':  extensions,
 
