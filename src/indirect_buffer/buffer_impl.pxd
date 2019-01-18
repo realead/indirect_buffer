@@ -7,6 +7,10 @@ cdef class IndirectMemory2D:
     cdef Py_ssize_t  row_count
     cdef Py_ssize_t  column_count
     cdef Py_ssize_t  element_size
+    cdef Py_ssize_t  shape[2]
+    cdef Py_ssize_t  strides[2]
+    cdef Py_ssize_t  suboffsets[2]
+    cdef Py_ssize_t  buffer_lock_cnt
    
                 
     cdef int**  as_int_ptr_ptr(self)
