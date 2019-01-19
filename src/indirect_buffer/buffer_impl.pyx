@@ -20,7 +20,7 @@ cdef class IndirectMemory2D:
    
     def __cinit__(self):
         self.ptr = NULL
-        self.own_data = 0
+        self.own_data = 0  # 0  means no, 1 means only ptr, 2 means whole data (also subpointers)
         self.row_count = 0
         self.column_count = 0
         self.element_size = 0
@@ -30,11 +30,12 @@ cdef class IndirectMemory2D:
     def __dealloc__(self):
         cdef Py_ssize_t i
         cdef void** p
-        if  self.own_data and self.ptr is not NULL:
+        if  self.own_data>0 and self.ptr is not NULL:
             p = <void**> self.ptr
-            for i in range(self.row_count):
-                if p[i] is not NULL:
-                    free(p[i])
+            if self.own_data>1:
+                for i in range(self.row_count):
+                    if p[i] is not NULL:
+                        free(p[i])
             free(self.ptr)
             self.ptr=NULL;
                 
@@ -107,7 +108,7 @@ cdef class IndirectMemory2D:
         """
         """
         cdef IndirectMemory2D mem = IndirectMemory2D()
-        mem.own_data = 1
+        mem.own_data = 2
         mem.row_count = rows
         mem.shape[0] = rows
         mem.column_count = cols
