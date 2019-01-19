@@ -25,7 +25,10 @@ cdef class IndirectMemory2D:
         self.column_count = 0
         self.element_size = 0
         self.buffer_lock_cnt = 0
-        self.format = None
+        self.format = None 
+        #need to set only once (could be a global variable as well)     
+        self.suboffsets[0] = 0
+        self.suboffsets[1] = -1
 
     def __dealloc__(self):
         cdef Py_ssize_t i
@@ -43,7 +46,17 @@ cdef class IndirectMemory2D:
         return <int**>self.ptr
 
   
+    cdef void _set_dimensions(self, Py_ssize_t rows, Py_ssize_t cols):
+        self.row_count = rows
+        self.shape[0] = rows
+        self.column_count = cols
+        self.shape[1] = cols
 
+    cdef void _set_format(self, object format):
+        self.format = ensure_bytes(format)
+        self.element_size = struct.calcsize(self.format) 
+        self.strides[0] = sizeof(void *)
+        self.strides[1] = self.element_size
 
     def __getbuffer__(self, buffer.Py_buffer *view, int flags):
         #is input sane?
@@ -109,16 +122,8 @@ cdef class IndirectMemory2D:
         """
         cdef IndirectMemory2D mem = IndirectMemory2D()
         mem.own_data = 2
-        mem.row_count = rows
-        mem.shape[0] = rows
-        mem.column_count = cols
-        mem.shape[1] = cols
-        mem.format = ensure_bytes(format)
-        mem.element_size = struct.calcsize(mem.format) 
-        mem.strides[0] = sizeof(void *)
-        mem.strides[1] = mem.element_size
-        mem.suboffsets[0] = 0
-        mem.suboffsets[1] = -1
+        mem._set_dimensions(rows, cols)
+        mem._set_format(format)
         mem.ptr = calloc(rows, sizeof(void*))
         if NULL == mem.ptr:
             raise MemoryError("Error in first allocation")
@@ -136,16 +141,8 @@ cdef class IndirectMemory2D:
         """
         cdef IndirectMemory2D mem = IndirectMemory2D()
         mem.own_data = 0
-        mem.row_count = rows
-        mem.shape[0] = rows
-        mem.column_count = cols
-        mem.shape[1] = cols
-        mem.format = ensure_bytes(format)
-        mem.element_size = struct.calcsize(mem.format) 
-        mem.strides[0] = sizeof(void *)
-        mem.strides[1] = mem.element_size
-        mem.suboffsets[0] = 0
-        mem.suboffsets[1] = -1
+        mem._set_dimensions(rows, cols)
+        mem._set_format(format)
         mem.ptr = ptr
         return mem
 
