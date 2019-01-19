@@ -2,19 +2,21 @@
 from cpython cimport buffer
 from libc.stdlib cimport calloc,free
 
+import struct
+
 
 cdef char *empty_buf=""
 
+
+cdef ensure_bytes(obj):
+    if not isinstance(obj, bytes):
+        obj=obj.encode('ascii')
+    return obj
 
 cdef class IndirectMemory2D:
     """
     helper class, owner/manager of the memory
     """
-    #cdef void*       ptr
-    #cdef bint        own_data
-    #cdef Py_ssize_t  row_count
-    #cdef Py_ssize_t  column_count
-    #cdef Py_ssize_t  element_size
    
     def __cinit__(self):
         self.ptr = NULL
@@ -23,6 +25,7 @@ cdef class IndirectMemory2D:
         self.column_count = 0
         self.element_size = 0
         self.buffer_lock_cnt = 0
+        self.format = None
 
     def __dealloc__(self):
         cdef Py_ssize_t i
@@ -70,8 +73,7 @@ cdef class IndirectMemory2D:
 
         # format:
         if (flags & buffer.PyBUF_FORMAT) == buffer.PyBUF_FORMAT:
-             #TODO: right format
-             view.format = "B"
+             view.format = self.format
         else:
              view.format = NULL
 
@@ -101,7 +103,7 @@ cdef class IndirectMemory2D:
         self.buffer_lock_cnt-=1
 
     @staticmethod
-    cdef IndirectMemory2D create(Py_ssize_t rows, Py_ssize_t cols, Py_ssize_t element_size):
+    cdef IndirectMemory2D create(Py_ssize_t rows, Py_ssize_t cols, object format):
         """
         """
         cdef IndirectMemory2D mem = IndirectMemory2D()
@@ -110,22 +112,25 @@ cdef class IndirectMemory2D:
         mem.shape[0] = rows
         mem.column_count = cols
         mem.shape[1] = cols
-        mem.element_size = element_size
+        mem.format = ensure_bytes(format)
+        mem.element_size = struct.calcsize(mem.format) 
         mem.strides[0] = sizeof(void *)
-        mem.strides[1] = element_size
+        mem.strides[1] = mem.element_size
+        mem.suboffsets[0] = 0
+        mem.suboffsets[1] = -1
         mem.ptr = calloc(rows, sizeof(void*))
         if NULL == mem.ptr:
             raise MemoryError("Error in first allocation")
         cdef Py_ssize_t i
         cdef void** ptr = <void**> mem.ptr
         for i in range(rows):
-             ptr[i] = calloc(cols, element_size)
+             ptr[i] = calloc(cols, mem.element_size)
              if ptr[i] is NULL:
                 raise MemoryError("Allocation of row "+str(i))  # allocated memory will be freed as soon as mem is deallocated
         return mem
 
     @staticmethod
-    cdef IndirectMemory2D from_ptr(void* ptr, Py_ssize_t rows, Py_ssize_t cols, Py_ssize_t element_size):
+    cdef IndirectMemory2D from_ptr(void* ptr, Py_ssize_t rows, Py_ssize_t cols, object format):
         """
         """
         cdef IndirectMemory2D mem = IndirectMemory2D()
@@ -134,9 +139,12 @@ cdef class IndirectMemory2D:
         mem.shape[0] = rows
         mem.column_count = cols
         mem.shape[1] = cols
-        mem.element_size = element_size
+        mem.format = ensure_bytes(format)
+        mem.element_size = struct.calcsize(mem.format) 
         mem.strides[0] = sizeof(void *)
-        mem.strides[1] = element_size
+        mem.strides[1] = mem.element_size
+        mem.suboffsets[0] = 0
+        mem.suboffsets[1] = -1
         mem.ptr = ptr
         return mem
 

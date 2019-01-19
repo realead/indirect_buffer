@@ -11,14 +11,15 @@ cdef class IndirectMemory2D:
     cdef Py_ssize_t  strides[2]
     cdef Py_ssize_t  suboffsets[2]
     cdef Py_ssize_t  buffer_lock_cnt
+    cdef bytes       format
    
                 
     cdef int**  as_int_ptr_ptr(self)
 
     @staticmethod
-    cdef IndirectMemory2D create(Py_ssize_t rows, Py_ssize_t cols, Py_ssize_t element_size)
+    cdef IndirectMemory2D create(Py_ssize_t rows, Py_ssize_t cols, object format)
 
     @staticmethod
-    cdef IndirectMemory2D from_ptr(void* ptr, Py_ssize_t rows, Py_ssize_t cols, Py_ssize_t element_size)
+    cdef IndirectMemory2D from_ptr(void* ptr, Py_ssize_t rows, Py_ssize_t cols, object format)
 
     
