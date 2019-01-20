@@ -176,6 +176,9 @@ cdef class BufferHolder:
     cdef void* get_ptr(self):
         return self.view.buf
 
+    cdef int get_readonly(self):
+        return self.view.readonly
+
 
 
 
@@ -191,6 +194,7 @@ cdef class BufferCollection2D(IndirectMemory2D):
         self.views = []
         cdef Py_ssize_t my_column_count = column_count
         cdef bytes my_format = None if format is None else ensure_bytes(format)
+        cdef int my_readonly = 0
 
         cdef BufferHolder view
         for i, obj in enumerate(rows):
@@ -209,11 +213,15 @@ cdef class BufferCollection2D(IndirectMemory2D):
             elif my_column_count != view.get_len():
                 raise BufferError("{0}. object, expected column count: {1}, found column count: {2}".format(i, my_column_count, view.get_len()))
 
+            if view.get_readonly()>0:
+                my_readonly = 1
+
             # view is OK:
             self.views.append(view)
 
         #initialize IndirectMemory2D:
         self.own_data = 1  # it owns only the direct ptr
+        self.readonly = my_readonly
         self._set_dimensions(len(self.views), my_column_count)
         self._set_format(my_format)
         self.ptr = calloc(self.row_count, sizeof(void*))
@@ -222,6 +230,7 @@ cdef class BufferCollection2D(IndirectMemory2D):
         cdef void** ptr = <void**> self.ptr
         for i,view in enumerate(self.views):
              ptr[i] = view.get_ptr()
+
 
 
         
