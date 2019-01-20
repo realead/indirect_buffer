@@ -152,7 +152,7 @@ cdef class BufferHolder:
     cdef buffer.Py_buffer view
     cdef bint buffer_set
     def __cinit__(self, obj):
-        buffer.PyObject_GetBuffer(obj, &(self.view), buffer.PyBUF_SIMPLE|buffer.PyBUF_FORMAT)
+        buffer.PyObject_GetBuffer(obj, &(self.view), buffer.PyBUF_FORMAT|buffer.PyBUF_ANY_CONTIGUOUS)
         buffer_set = 1
 
     def __dealloc__(self):
@@ -191,17 +191,17 @@ cdef class BufferCollection2D(IndirectMemory2D):
             view = BufferHolder(obj)
 
             if not unravel and view.get_ndim()!=1:
-                raise BufferError(i+". object has dimensionality: ["+view.get_ndim()+"] only one-dimensional objects are accepted")
+                raise BufferError("{0}. object has dimensionality: {1}, but only one-dimensional objects are accepted".format(i,view.get_ndim()))
             
             if my_format is None:
                 my_format = view.get_format()
             elif my_format != view.get_format():
-                raise BufferError(i+". object, expected format: ["+my_format+"], found format: ["+view.get_format()+"]")
+                raise BufferError("{0}. object, expected format: [{1}], found format: [{2}]".format(i, my_format, view.get_format()))
 
             if my_column_count == -1:
                 my_column_count = view.get_len()
             elif my_column_count != view.get_len():
-                raise BufferError(i+". object, expected column count: ["+my_column_count+"], found_format: ["+view.get_len()+"]")
+                raise BufferError("{0}. object, expected column count: {1}, found column count: {2}".format(i, my_column_count, view.get_len()))
 
             # view is OK:
             self.views.append(view)
