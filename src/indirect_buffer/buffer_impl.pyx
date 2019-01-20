@@ -25,6 +25,7 @@ cdef class IndirectMemory2D:
         self.column_count = 0
         self.element_size = 0
         self.buffer_lock_cnt = 0
+        self.readonly = 0
         self.format = None 
         #need to set only once (could be a global variable as well)     
         self.suboffsets[0] = 0
@@ -78,9 +79,11 @@ cdef class IndirectMemory2D:
         # in bytes
         view.len = self.row_count * self.column_count * self.element_size
 
-        # for the time being everybody can write 
-        # (alowed no matter whether  PyBUF_WRITABLE is in flags)
-        view.readonly = 0;
+         
+        # 0 or 1 possible as long as the same for all
+        if (flags & buffer.PyBUF_WRITABLE) == buffer.PyBUF_WRITABLE and self.readonly == 1:
+            raise BufferError("buffer is not writable")
+        view.readonly = self.readonly
 
         # should be original value, even if buffer.format is set to NULL
         view.itemsize = self.element_size;
@@ -117,11 +120,12 @@ cdef class IndirectMemory2D:
         self.buffer_lock_cnt-=1
 
     @staticmethod
-    cdef IndirectMemory2D create(Py_ssize_t rows, Py_ssize_t cols, object format):
+    cdef IndirectMemory2D create(Py_ssize_t rows, Py_ssize_t cols, object format, int readonly):
         """
         """
         cdef IndirectMemory2D mem = IndirectMemory2D()
         mem.own_data = 2
+        mem.readonly = readonly
         mem._set_dimensions(rows, cols)
         mem._set_format(format)
         mem.ptr = calloc(rows, sizeof(void*))
@@ -136,11 +140,12 @@ cdef class IndirectMemory2D:
         return mem
 
     @staticmethod
-    cdef IndirectMemory2D from_ptr(void* ptr, Py_ssize_t rows, Py_ssize_t cols, object format):
+    cdef IndirectMemory2D from_ptr(void* ptr, Py_ssize_t rows, Py_ssize_t cols, object format, int readonly):
         """
         """
         cdef IndirectMemory2D mem = IndirectMemory2D()
         mem.own_data = 0
+        mem.readonly = readonly
         mem._set_dimensions(rows, cols)
         mem._set_format(format)
         mem.ptr = ptr
@@ -170,6 +175,7 @@ cdef class BufferHolder:
 
     cdef void* get_ptr(self):
         return self.view.buf
+
 
 
 
