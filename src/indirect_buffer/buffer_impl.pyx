@@ -1,5 +1,5 @@
  
-from cpython cimport buffer
+from cpython cimport buffer, PyBuffer_Release
 from libc.stdlib cimport calloc,free
 
 import struct
@@ -146,4 +146,77 @@ cdef class IndirectMemory2D:
         mem.ptr = ptr
         return mem
 
+
+#as a simple contiguous memory
+cdef class BufferHolder: 
+    cdef buffer.Py_buffer view
+    cdef bint buffer_set
+    def __cinit__(self, obj):
+        buffer.PyObject_GetBuffer(obj, &(self.view), buffer.PyBUF_SIMPLE|buffer.PyBUF_FORMAT)
+        buffer_set = 1
+
+    def __dealloc__(self):
+        if self.buffer_set:
+            PyBuffer_Release(&(self.view)) 
+
+    cdef Py_ssize_t get_len(self):
+        return self.view.len//self.view.itemsize
+
+    cdef bytes get_format(self):
+        return self.view.format  
+    
+    cdef int get_ndim(self):
+        return self.view.ndim 
+
+    cdef void* get_ptr(self):
+        return self.view.buf
+
+
+
+cdef class BufferCollection2D(IndirectMemory2D):  
+    # cdef list views 
+
+    def __cinit__(self, rows, column_count=-1, format=None, unravel = True):
+        """
+           column_count = -1 for auto detecting the number of columns
+           format = None for auto detecting the format
+           for unravel=False only one dimensional arrays are accepted, otherwise continuous memory is interpreted as unraveled
+        """
+        self.views = []
+        cdef Py_ssize_t my_column_count = column_count
+        cdef bytes my_format = None if format is None else ensure_bytes(format)
+
+        cdef BufferHolder view
+        for i, obj in enumerate(rows):
+            view = BufferHolder(obj)
+
+            if not unravel and view.get_ndim()!=1:
+                raise BufferError(i+". object has dimensionality: ["+view.get_ndim()+"] only one-dimensional objects are accepted")
+            
+            if my_format is None:
+                my_format = view.get_format()
+            elif my_format != view.get_format():
+                raise BufferError(i+". object, expected format: ["+my_format+"], found format: ["+view.get_format()+"]")
+
+            if my_column_count == -1:
+                my_column_count = view.get_len()
+            elif my_column_count != view.get_len():
+                raise BufferError(i+". object, expected column count: ["+my_column_count+"], found_format: ["+view.get_len()+"]")
+
+            # view is OK:
+            self.views.append(view)
+
+        #initialize IndirectMemory2D:
+        self.own_data = 1  # it owns only the direct ptr
+        self._set_dimensions(len(self.views), my_column_count)
+        self._set_format(my_format)
+        self.ptr = calloc(self.row_count, sizeof(void*))
+        if NULL == self.ptr:
+            raise MemoryError("Error in first allocation")
+        cdef void** ptr = <void**> self.ptr
+        for i,view in enumerate(self.views):
+             ptr[i] = view.get_ptr()
+
+
+        
     

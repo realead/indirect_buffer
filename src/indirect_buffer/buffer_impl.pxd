@@ -26,4 +26,8 @@ cdef class IndirectMemory2D:
     cdef void _set_dimensions(self, Py_ssize_t rows, Py_ssize_t cols)
     cdef void _set_format(self, object format)
 
-    
+ 
+# collects different buffers,every buffer means a row.
+# all buffers should be continous, one-dimensional and have the same length.
+cdef class BufferCollection2D(IndirectMemory2D):  
+    cdef list views
