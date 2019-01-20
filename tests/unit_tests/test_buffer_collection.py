@@ -67,3 +67,32 @@ class BufferCollection2DPurePython(unittest.TestCase):
         view = memoryview(mem)
         self.assertEqual(view.readonly, 0)
 
+
+    def test_readonly_make_read_only(self):
+        arr1=bytearray(b'aa')
+        mem = BufferCollection2D([arr1])
+        mem.make_read_only()
+        view = memoryview(mem)
+        self.assertEqual(view.readonly, 1)
+
+
+    def test_readonly_make_read_only_locked(self):
+        arr1=bytearray(b'aa')
+        mem = BufferCollection2D([arr1])
+        view = memoryview(mem)
+        self.assertEqual(view.readonly, 0)
+        with self.assertRaises(BufferError) as context:
+            mem.make_read_only()
+        self.assertEqual("buffer is locked", context.exception.args[0])
+        
+
+    def test_readonly_make_read_only_if_readonly(self):
+        arr1 = b'aa'
+        mem = BufferCollection2D([arr1])
+        view = memoryview(mem)
+        self.assertEqual(view.readonly, 1)
+        mem.make_read_only()
+        self.assertTrue(True)
+
+
+

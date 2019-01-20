@@ -233,5 +233,10 @@ cdef class BufferCollection2D(IndirectMemory2D):
 
 
 
+    def make_read_only(self):
+        # all consumers should  see the same readonly flag!
+        if self.readonly == 0 and self.buffer_lock_cnt != 0:
+            raise BufferError('buffer is locked')
+        self.readonly = 1
         
     
