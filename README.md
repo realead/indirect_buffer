@@ -6,11 +6,14 @@ implements buffer protocol for indirect memory layouts
 
    Wraps indirect 2D memory layouts, e.g. `int**` in Python via buffer-protocol. Makes it possible to pass data from/to Python to/from C/C++-routines with such layout.
 
+   This is Python3-only package.
+
 
 ## Dependencies:
 
-Essential: 
+Essentials: 
 
+  - Python 3 (tested with Python 3.6)
   - setuptools
   - Cython
   - c-build chain
@@ -145,7 +148,7 @@ The resulting `BufferCollection2D` is read-only, if ther is at least one read-on
 
 ## Testing:
 
-For testing of the local version run (or p2 for python2):
+For testing of the local version run:
 
     sh test_install.sh p3
 
@@ -161,5 +164,5 @@ For keeping the the virtual enviroment after the tests:
 
 ## Versions:
 
-    0.1.0: `IndirectMemory2D`, `BufferCollection2D`
+  0.1.0: `IndirectMemory2D`, `BufferCollection2D`
 
