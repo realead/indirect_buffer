@@ -13,6 +13,7 @@ cdef class IndirectMemory2D:
     cdef Py_ssize_t  buffer_lock_cnt
     cdef int         readonly
     cdef bytes       format
+    cdef object      memory_nanny
    
                 
     cdef int**  as_int_ptr_ptr(self)

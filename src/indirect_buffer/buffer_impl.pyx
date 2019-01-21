@@ -13,6 +13,59 @@ cdef ensure_bytes(obj):
         obj=obj.encode('ascii')
     return obj
 
+#
+# helper classes for managing the memory ownership
+#
+cdef class WholeMemoryNanny:
+    """
+       frees not only the ptr, but also all ptr[i]
+    """
+    cdef void *ptr
+    cdef Py_ssize_t row_count
+
+    @staticmethod
+    cdef WholeMemoryNanny create(void *ptr, Py_ssize_t row_count):
+         cdef  WholeMemoryNanny self =  WholeMemoryNanny()
+         self.ptr=ptr
+         self.row_count=row_count
+         return self
+
+    def __dealloc__(self):
+        cdef Py_ssize_t i
+        cdef void** p
+        if self.ptr is not NULL:
+            p = <void**> self.ptr
+            for i in range(self.row_count):
+                    if p[i] is not NULL:
+                        free(p[i])
+                        p[i]=NULL
+            free(self.ptr)
+            self.ptr=NULL
+
+
+cdef class OnlyPointerNanny:
+    """
+       frees only the ptr, but not ptr[i]
+    """
+    cdef void *ptr
+    cdef Py_ssize_t row_count  #just for info, not really used
+
+    @staticmethod
+    cdef OnlyPointerNanny create(void *ptr, row_count):
+         cdef OnlyPointerNanny self = OnlyPointerNanny()
+         self.ptr = ptr
+         self.row_count = row_count
+         return self
+
+    def __dealloc__(self):      
+        free(self.ptr)
+        self.ptr=NULL  
+
+
+#
+# The working horse: exposes data via BufferInterface
+#  
+
 cdef class IndirectMemory2D:
     """
     helper class, owner/manager of the memory
@@ -27,21 +80,11 @@ cdef class IndirectMemory2D:
         self.buffer_lock_cnt = 0
         self.readonly = 0
         self.format = None 
+        self.memory_nanny = None
         #need to set only once (could be a global variable as well)     
         self.suboffsets[0] = 0
         self.suboffsets[1] = -1
 
-    def __dealloc__(self):
-        cdef Py_ssize_t i
-        cdef void** p
-        if  self.own_data>0 and self.ptr is not NULL:
-            p = <void**> self.ptr
-            if self.own_data>1:
-                for i in range(self.row_count):
-                    if p[i] is not NULL:
-                        free(p[i])
-            free(self.ptr)
-            self.ptr=NULL;
                 
     cdef int**  as_int_ptr_ptr(self):
         return <int**>self.ptr
@@ -53,11 +96,13 @@ cdef class IndirectMemory2D:
         self.column_count = cols
         self.shape[1] = cols
 
+
     cdef void _set_format(self, object format):
         self.format = ensure_bytes(format)
         self.element_size = struct.calcsize(self.format) 
         self.strides[0] = sizeof(void *)
         self.strides[1] = self.element_size
+
 
     def __getbuffer__(self, buffer.Py_buffer *view, int flags):
         #is input sane?
@@ -131,6 +176,7 @@ cdef class IndirectMemory2D:
         mem.ptr = calloc(rows, sizeof(void*))
         if NULL == mem.ptr:
             raise MemoryError("Error in first allocation")
+        mem.memory_nanny = WholeMemoryNanny.create(mem.ptr, rows)
         cdef Py_ssize_t i
         cdef void** ptr = <void**> mem.ptr
         for i in range(rows):
@@ -152,7 +198,16 @@ cdef class IndirectMemory2D:
         return mem
 
 
-#as a simple contiguous memory
+
+#
+#
+# Extension of the BufferInterface
+#
+#
+
+
+# small helper class for managing of views
+
 cdef class BufferHolder: 
     cdef buffer.Py_buffer view
     cdef bint buffer_set
@@ -178,9 +233,6 @@ cdef class BufferHolder:
 
     cdef int get_readonly(self):
         return self.view.readonly
-
-
-
 
 cdef class BufferCollection2D(IndirectMemory2D):  
     # cdef list views 
@@ -227,6 +279,7 @@ cdef class BufferCollection2D(IndirectMemory2D):
         self.ptr = calloc(self.row_count, sizeof(void*))
         if NULL == self.ptr:
             raise MemoryError("Error in first allocation")
+        self.memory_nanny = OnlyPointerNanny.create(self.ptr, self.row_count)
         cdef void** ptr = <void**> self.ptr
         for i,view in enumerate(self.views):
              ptr[i] = view.get_ptr()
