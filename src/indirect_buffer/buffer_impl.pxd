@@ -23,6 +23,8 @@ cdef class IndirectMemory2D:
 
     @staticmethod
     cdef IndirectMemory2D from_ptr(void* ptr, Py_ssize_t rows, Py_ssize_t cols, object format, int readonly)
+    @staticmethod
+    cdef IndirectMemory2D from_ptr_with_memory_nanny(void* ptr, Py_ssize_t rows, Py_ssize_t cols, object format, int readonly, object memory_nanny)
 
     # private:
     cdef void _set_dimensions(self, Py_ssize_t rows, Py_ssize_t cols)

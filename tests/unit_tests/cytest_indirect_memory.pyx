@@ -4,6 +4,19 @@ from cython cimport view
 from indirect_buffer.buffer_impl cimport IndirectMemory2D
 
 
+class MockMemNanny:
+    def __init__(self, lst):
+        self.lst=lst
+
+    def __del__(self):
+        self.lst.append("Deallocated")
+
+
+#makes sure there are no references to MockMemNanny-object around
+cdef create_with_nanny(void * ptr, lst):
+    mem = IndirectMemory2D.from_ptr_with_memory_nanny(ptr,1,1,'i',0, MockMemNanny(lst))
+    return mem
+
 class IndirectMemoryTester(unittest.TestCase): 
     def test_create(self):
         mem = IndirectMemory2D.create(5,6,b'i',0)
@@ -48,6 +61,19 @@ class IndirectMemoryTester(unittest.TestCase):
        cdef int **ptr_ptr = &ptr
        mem = IndirectMemory2D.from_ptr(<void *>ptr_ptr,1,1,'i',0)
        self.assertEqual(mem.as_int_ptr_ptr()[0][0], 5)
+
+ 
+    def test_from_pointer_with_nanny(self):
+       cdef int val = 5
+       cdef int *ptr = &val
+       cdef int **ptr_ptr = &ptr
+       lst=[]
+       mem = create_with_nanny(<void *>ptr_ptr, lst)
+       view = memoryview(mem)
+       del mem
+       self.assertEqual(len(lst), 0)
+       del view
+       self.assertEqual(len(lst), 1)
 
 
     def test_from_pointer_getbuffer(self):

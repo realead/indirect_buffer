@@ -185,8 +185,16 @@ cdef class IndirectMemory2D:
                 raise MemoryError("Allocation of row "+str(i))  # allocated memory will be freed as soon as mem is deallocated
         return mem
 
+
     @staticmethod
     cdef IndirectMemory2D from_ptr(void* ptr, Py_ssize_t rows, Py_ssize_t cols, object format, int readonly):
+        """
+        """
+        return IndirectMemory2D.from_ptr_with_memory_nanny(ptr,rows, cols, format, readonly, None)
+
+
+    @staticmethod
+    cdef IndirectMemory2D from_ptr_with_memory_nanny(void* ptr, Py_ssize_t rows, Py_ssize_t cols, object format, int readonly, object memory_nanny):
         """
         """
         cdef IndirectMemory2D mem = IndirectMemory2D()
@@ -195,6 +203,7 @@ cdef class IndirectMemory2D:
         mem._set_dimensions(rows, cols)
         mem._set_format(format)
         mem.ptr = ptr
+        mem.memory_nanny =  memory_nanny
         return mem
 
 
