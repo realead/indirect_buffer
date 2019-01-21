@@ -164,6 +164,11 @@ cdef class IndirectMemory2D:
     def __releasebuffer__(self, buffer.Py_buffer *view):
         self.buffer_lock_cnt-=1
 
+
+    @staticmethod
+    def create_memory(Py_ssize_t rows, Py_ssize_t cols, object format, readonly=False):
+        return IndirectMemory2D.create(rows, cols, format, readonly)
+
     @staticmethod
     cdef IndirectMemory2D create(Py_ssize_t rows, Py_ssize_t cols, object format, int readonly):
         """
