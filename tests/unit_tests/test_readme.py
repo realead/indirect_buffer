@@ -5,6 +5,7 @@ import pyximport; pyximport.install(language_level=sys.version_info[0])
 from cytest_readme import *
 
 
+import ctypes
 from indirect_buffer import BufferCollection2D, IndirectMemory2D
 
 
@@ -43,5 +44,15 @@ class ReadmePurePython(unittest.TestCase):
         mem = BufferCollection2D([arr1, arr2])
         view = memoryview(mem)
         self.assertEqual(view[1,1], ord("d"))
+
+
+    def test_wrap_ctypes(self):
+         data=(ctypes.POINTER(ctypes.c_int)*2)((ctypes.c_int*1)(0), (ctypes.c_int*1)(42))
+         mem = IndirectMemory2D.from_ctype_ptr(data, 2,1)
+         mem.reinterpret_data('i')
+         view=memoryview(mem)
+         self.assertEqual(view[1,0], 42)
+         view[1,0] =  21
+         self.assertEqual(data[1][0], 21)
 
 

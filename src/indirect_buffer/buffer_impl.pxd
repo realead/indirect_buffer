@@ -27,8 +27,8 @@ cdef class IndirectMemory2D:
     cdef IndirectMemory2D from_ptr_with_memory_nanny(void* ptr, Py_ssize_t rows, Py_ssize_t cols, object format, int readonly, object memory_nanny)
 
     # private:
-    cdef void _set_dimensions(self, Py_ssize_t rows, Py_ssize_t cols)
-    cdef void _set_format(self, object format)
+    cdef void __set_dimensions(self, Py_ssize_t rows, Py_ssize_t cols)
+    cdef void __set_format(self, object format)
 
  
 # collects different buffers,every buffer means a row.

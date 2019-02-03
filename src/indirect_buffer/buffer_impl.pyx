@@ -7,6 +7,23 @@ import struct
 
 cdef char *empty_buf=""
 
+# info about buffer, valid as long as exporter is alive
+cdef struct BufferInfo:
+    char *format
+    Py_ssize_t len
+    void *ptr
+
+cdef BufferInfo get_info_via_buffer(obj):
+    cdef BufferInfo info
+    cdef buffer.Py_buffer view
+    buffer.PyObject_GetBuffer(obj, &view, buffer.PyBUF_FORMAT|buffer.PyBUF_ANY_CONTIGUOUS)
+    info.format = view.format
+    info.ptr    = view.buf
+    info.len    = view.len//view.itemsize
+    buffer.PyBuffer_Release(&view)
+    return info
+
+
 
 cdef ensure_bytes(obj):
     if not isinstance(obj, bytes):
@@ -90,18 +107,38 @@ cdef class IndirectMemory2D:
         return <int**>self.ptr
 
   
-    cdef void _set_dimensions(self, Py_ssize_t rows, Py_ssize_t cols):
+    cdef void __set_dimensions(self, Py_ssize_t rows, Py_ssize_t cols):
         self.row_count = rows
         self.shape[0] = rows
         self.column_count = cols
         self.shape[1] = cols
 
 
-    cdef void _set_format(self, object format):
+    cdef void __set_format(self, object format):
         self.format = ensure_bytes(format)
         self.element_size = struct.calcsize(self.format) 
         self.strides[0] = sizeof(void *)
         self.strides[1] = self.element_size
+
+
+    def get_format(self):
+        return self.format
+
+
+    def reinterpret_data(self, new_format):
+        cdef bytes new_format_b = ensure_bytes(new_format)
+        if new_format_b == self.format:
+            return
+
+        if self.buffer_lock_cnt != 0:
+            raise BufferError('buffer is locked')
+
+        cdef Py_ssize_t row_len = self.column_count * self.element_size        
+        cdef Py_ssize_t new_element_size = struct.calcsize(new_format_b)
+
+        cdef Py_ssize_t new_column_count = row_len//new_element_size
+        self.__set_dimensions(self.row_count, new_column_count)
+        self.__set_format(new_format_b)
 
 
     def __getbuffer__(self, buffer.Py_buffer *view, int flags):
@@ -176,8 +213,8 @@ cdef class IndirectMemory2D:
         cdef IndirectMemory2D mem = IndirectMemory2D()
         mem.own_data = 2
         mem.readonly = readonly
-        mem._set_dimensions(rows, cols)
-        mem._set_format(format)
+        mem.__set_dimensions(rows, cols)
+        mem.__set_format(format)
         mem.ptr = calloc(rows, sizeof(void*))
         if NULL == mem.ptr:
             raise MemoryError("Error in first allocation")
@@ -205,11 +242,34 @@ cdef class IndirectMemory2D:
         cdef IndirectMemory2D mem = IndirectMemory2D()
         mem.own_data = 0
         mem.readonly = readonly
-        mem._set_dimensions(rows, cols)
-        mem._set_format(format)
+        mem.__set_dimensions(rows, cols)
+        mem.__set_format(format)
         mem.ptr = ptr
         mem.memory_nanny =  memory_nanny
         return mem
+
+
+    @staticmethod
+    def from_ctype_ptr(ptr, Py_ssize_t rows, Py_ssize_t cols, int readonly=False, object memory_nanny=None):
+        """
+        wraps indirect ctypes pointers (e.g double**), 
+        if memory_nanny == None, keeps a reference to the ctypes-objects 
+                          and assumes, that the pointer lives at least as long as the ctypes-object
+        """
+        cdef BufferInfo info = get_info_via_buffer(ptr)
+        if    info.format == NULL       or  \
+              info.format[0] == 0       or  \
+              info.format[0] != ord('&') or \
+              info.format[1] == 0       or  \
+              info.format[1] == ord('&'):
+            raise BufferError("wrong format: "+str(bytes(info.format)))
+        cdef char *format_view = info.format+1
+        if memory_nanny is None:
+            memory_nanny = ptr
+        if info.len < rows:
+            raise BufferError("less rows than expected: {0} vs. {1}".format(info.len, rows))
+        return IndirectMemory2D.from_ptr_with_memory_nanny(info.ptr, rows, cols, info.format[1:], readonly, None)
+
 
 
 
@@ -288,8 +348,8 @@ cdef class BufferCollection2D(IndirectMemory2D):
         #initialize IndirectMemory2D:
         self.own_data = 1  # it owns only the direct ptr
         self.readonly = my_readonly
-        self._set_dimensions(len(self.views), my_column_count)
-        self._set_format(my_format)
+        self.__set_dimensions(len(self.views), my_column_count)
+        self.__set_format(my_format)
         self.ptr = calloc(self.row_count, sizeof(void*))
         if NULL == self.ptr:
             raise MemoryError("Error in first allocation")
