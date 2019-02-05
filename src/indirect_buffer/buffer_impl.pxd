@@ -3,7 +3,6 @@
 cdef class IndirectMemory2D:
 
     cdef void*       ptr
-    cdef bint        own_data
     cdef Py_ssize_t  row_count
     cdef Py_ssize_t  column_count
     cdef Py_ssize_t  element_size
@@ -11,7 +10,7 @@ cdef class IndirectMemory2D:
     cdef Py_ssize_t  strides[2]
     cdef Py_ssize_t  suboffsets[2]
     cdef Py_ssize_t  buffer_lock_cnt
-    cdef int         readonly
+    cdef bint        readonly
     cdef bytes       format
     cdef object      memory_nanny
    

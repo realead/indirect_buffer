@@ -90,7 +90,6 @@ cdef class IndirectMemory2D:
    
     def __cinit__(self):
         self.ptr = NULL
-        self.own_data = 0  # 0  means no, 1 means only ptr, 2 means whole data (also subpointers)
         self.row_count = 0
         self.column_count = 0
         self.element_size = 0
@@ -211,7 +210,6 @@ cdef class IndirectMemory2D:
         """
         """
         cdef IndirectMemory2D mem = IndirectMemory2D()
-        mem.own_data = 2
         mem.readonly = readonly
         mem.__set_dimensions(rows, cols)
         mem.__set_format(format)
@@ -240,7 +238,6 @@ cdef class IndirectMemory2D:
         """
         """
         cdef IndirectMemory2D mem = IndirectMemory2D()
-        mem.own_data = 0
         mem.readonly = readonly
         mem.__set_dimensions(rows, cols)
         mem.__set_format(format)
@@ -346,7 +343,6 @@ cdef class BufferCollection2D(IndirectMemory2D):
             self.views.append(view)
 
         #initialize IndirectMemory2D:
-        self.own_data = 1  # it owns only the direct ptr
         self.readonly = my_readonly
         self.__set_dimensions(len(self.views), my_column_count)
         self.__set_format(my_format)
