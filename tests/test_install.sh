@@ -38,5 +38,6 @@ if [ "$3" = "keep" ]; then
    echo "keeping enviroment $ENV_DIR"
 else
    rm -r "$ENV_DIR"
+   rm -r unit_tests/temp_builds
 fi;
 
