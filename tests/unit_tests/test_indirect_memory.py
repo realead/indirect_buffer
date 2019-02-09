@@ -73,4 +73,9 @@ class IndirectMemory2D2DPurePython(unittest.TestCase):
 
 
 
-
+    def test_shape(self):
+        mem = IndirectMemory2D.create_memory(rows=42, cols=21, format='b', readonly=False)
+        shape = mem.shape
+        self.assertEqual(len(shape), 2)
+        self.assertEqual(shape[0],42)
+        self.assertEqual(shape[1],21)

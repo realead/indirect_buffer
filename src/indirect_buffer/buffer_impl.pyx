@@ -140,6 +140,11 @@ cdef class IndirectMemory2D:
         self.__set_format(new_format_b)
 
 
+    @property
+    def shape(self):
+        return self.shape
+
+
     def __getbuffer__(self, buffer.Py_buffer *view, int flags):
         #is input sane?
         if(view==NULL):
