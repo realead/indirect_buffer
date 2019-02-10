@@ -120,6 +120,17 @@ An example of such a `memory_nanny` could be the following `cdef`-class:
 
 The memory becomes deallocated as soon as the `memory_nanny`-object is deleted, which happens when `IndirectMemory2D` is deleted (unless `memory_nanny` is shared between multiple `IndirectMemory2D` objects.
 
+#### copying data
+
+The indirect memory layout isn't supported by numpy, so the data needs to be copied to/from numpy arrays. This can be achieved with help of `copy_from` and `copy_to` routines:
+
+    def copy_from(self, obj, cast=False)
+    def copy_to(self, obj, cast=False)
+
+`obj` should implement the buffer-protocol and have the same shape as the `IndirectMemory2D`-object, the same `format` if `cast==False` or the same itemsize if `cast==True`.
+
+However, in some scenarios the copying can be avoided by creating a memory view via `BufferCollection2D` (see below).
+
 #### with ctypes-pointers
 
 One could also wrap an indirect pointer obtained by `ctypes` via
