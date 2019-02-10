@@ -130,6 +130,17 @@ cdef void  copy_checked_buffer(buffer.Py_buffer *src, buffer.Py_buffer *dest):
             memcpy(ptr_dest, ptr_src, src.itemsize)
 
 
+cdef void  copy_checked_buffer_rowwise(buffer.Py_buffer *src, buffer.Py_buffer *dest):
+    cdef void *ptr_src = NULL
+    cdef void *ptr_dest = NULL
+    cdef Py_ssize_t row, col
+    for row in range(src.shape[0]):
+        ptr_src = get_item_pointer(row, 0, src.buf, src.strides, src.suboffsets)
+        ptr_dest = get_item_pointer(row, 0, dest.buf, dest.strides, dest.suboffsets)
+        memcpy(ptr_dest, ptr_src, src.itemsize*src.shape[1])
+
+
+
 cdef int copy_buffer(buffer.Py_buffer *src, buffer.Py_buffer *dest, bint cast) except -1:
     #checks:
     if dest.readonly:
@@ -151,7 +162,11 @@ cdef int copy_buffer(buffer.Py_buffer *src, buffer.Py_buffer *dest, bint cast) e
     if dest.suboffsets != NULL and dest.suboffsets[1]>=0:  
         raise  BufferError("invalid suboffsets") 
     # now real copy:
-    copy_checked_buffer(src, dest)
+    if src.strides[1] == src.itemsize and dest.strides[1] == dest.itemsize:
+        # in this special (but probably common scenario) an optimization is possible
+        copy_checked_buffer_rowwise(src, dest)
+    else:
+        copy_checked_buffer(src, dest)
     return 0
 
 
