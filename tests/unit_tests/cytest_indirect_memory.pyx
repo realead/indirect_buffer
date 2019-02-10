@@ -1,6 +1,7 @@
 import unittest
 
 from cython cimport view
+from cython.view cimport array as cvarray
 from indirect_buffer.buffer_impl cimport IndirectMemory2D
 
 
@@ -113,6 +114,46 @@ class IndirectMemoryTester(unittest.TestCase):
        with self.assertRaises(BufferError) as context:
             data = mem
        self.assertEqual("buffer is not writable", context.exception.args[0])       
+
+
+    def test_copy_from_to_clayout(self):
+       orig = view.array(shape=(42, 32), itemsize=sizeof(int), format="i", mode="c")
+       copy = view.array(shape=(42, 32), itemsize=sizeof(int), format="i", mode="c")
+       mem = IndirectMemory2D.create(42,32,'i',0)
+       orig[11, 25] = 42
+       mem.copy_from(orig)
+       mem.copy_to(copy)
+       self.assertEqual(copy[11, 25], 42) 
+
+
+    def test_copy_from_to_fortranlayout(self):
+       orig = view.array(shape=(42, 32), itemsize=sizeof(int), format="i", mode="fortran")
+       copy = view.array(shape=(42, 32), itemsize=sizeof(int), format="i", mode="fortran")
+       mem = IndirectMemory2D.create(42,32,'i',0)
+       orig[11, 25] = 42
+       mem.copy_from(orig)
+       mem.copy_to(copy)
+       self.assertEqual(copy[11, 25], 42)    
+
+
+    def test_copy_from_fortranlayout_to_clayout(self):
+       orig = view.array(shape=(42, 32), itemsize=sizeof(int), format="i", mode="fortran")
+       copy = view.array(shape=(42, 32), itemsize=sizeof(int), format="i", mode="c")
+       mem = IndirectMemory2D.create(42,32,'i',0)
+       orig[11, 25] = 42
+       mem.copy_from(orig)
+       mem.copy_to(copy)
+       self.assertEqual(copy[11, 25], 42)    
+
+
+    def test_copy_from_clayout_to_fortranlayout(self):
+       orig = view.array(shape=(42, 32), itemsize=sizeof(int), format="i", mode="c")
+       copy = view.array(shape=(42, 32), itemsize=sizeof(int), format="i", mode="fortran")
+       mem = IndirectMemory2D.create(42,32,'i',0)
+       orig[11, 25] = 42
+       mem.copy_from(orig)
+       mem.copy_to(copy)
+       self.assertEqual(copy[11, 25], 42)    
 
 
 

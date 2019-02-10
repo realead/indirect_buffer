@@ -1,6 +1,7 @@
  
 from cpython cimport buffer, PyBuffer_Release
 from libc.stdlib cimport calloc,free
+from libc.string cimport memcpy, strcmp
 
 import struct
 
@@ -79,6 +80,81 @@ cdef class OnlyPointerNanny:
         self.ptr=NULL  
 
 
+
+# small helper class for managing of views
+
+cdef class BufferHolder: 
+    cdef buffer.Py_buffer view
+    cdef bint buffer_set
+    def __cinit__(self, obj, buffer_flags = buffer.PyBUF_FORMAT|buffer.PyBUF_ANY_CONTIGUOUS):
+        buffer.PyObject_GetBuffer(obj, &(self.view), buffer_flags)
+        buffer_set = 1
+
+    def __dealloc__(self):
+        if self.buffer_set:
+            PyBuffer_Release(&(self.view)) 
+
+    cdef Py_ssize_t get_len(self):
+        return self.view.len//self.view.itemsize
+
+    cdef bytes get_format(self):
+        return self.view.format  
+    
+    cdef int get_ndim(self):
+        return self.view.ndim 
+
+    cdef void* get_ptr(self):
+        return self.view.buf
+
+    cdef int get_readonly(self):
+        return self.view.readonly
+
+
+cdef void *get_item_pointer(Py_ssize_t row, Py_ssize_t col, void *buf, Py_ssize_t *strides, Py_ssize_t *suboffsets):
+    cdef char *pointer = <char*>buf
+    pointer += strides[0] * row
+    if suboffsets!=NULL and suboffsets[0] >=0 : 
+            pointer = (<char**>pointer)[0] + suboffsets[0];
+    pointer += strides[1] * col
+    return <void*>pointer;
+
+
+cdef void  copy_checked_buffer(buffer.Py_buffer *src, buffer.Py_buffer *dest):
+    cdef void *ptr_src = NULL
+    cdef void *ptr_dest = NULL
+    cdef Py_ssize_t row, col
+    for row in range(src.shape[0]):
+        for col in range(src.shape[1]):
+            ptr_src = get_item_pointer(row, col, src.buf, src.strides, src.suboffsets)
+            ptr_dest = get_item_pointer(row, col, dest.buf, dest.strides, dest.suboffsets)
+            memcpy(ptr_dest, ptr_src, src.itemsize)
+
+
+cdef int copy_buffer(buffer.Py_buffer *src, buffer.Py_buffer *dest, bint cast) except -1:
+    #checks:
+    if dest.readonly:
+         raise BufferError("copying to readonly buffer")
+    if dest.ndim != 2:
+        raise BufferError("wrong number of dimensions: expected 2, received {0}".format(dest.ndim))
+    if src.ndim != 2:
+        raise BufferError("wrong number of dimensions: expected 2, received {0}".format(src.ndim))
+    if src.shape == NULL or  dest.shape == NULL or src.shape[0]!=dest.shape[0] or src.shape[1]!=dest.shape[1]:
+        raise BufferError("different shapes")
+    if not cast and  strcmp(src.format, dest.format)!=0:
+        raise  BufferError("different formats") 
+    if cast and src.itemsize != dest.itemsize:   
+        raise  BufferError("different itemsizes") 
+    if src.strides == NULL or dest.strides == NULL:  
+        raise  BufferError("invalid strides")   
+    if src.suboffsets != NULL and src.suboffsets[1]>=0:  
+        raise  BufferError("invalid suboffsets")   
+    if dest.suboffsets != NULL and dest.suboffsets[1]>=0:  
+        raise  BufferError("invalid suboffsets") 
+    # now real copy:
+    copy_checked_buffer(src, dest)
+    return 0
+
+
 #
 # The working horse: exposes data via BufferInterface
 #  
@@ -143,6 +219,26 @@ cdef class IndirectMemory2D:
     @property
     def shape(self):
         return self.shape
+
+    
+    def copy_from(self, obj, cast = False):
+        """
+            copies data from an object via buffer-protocol.
+            obj should have the same shape and format (cast==False) or same itemsize (cast=True)
+        """
+        cdef BufferHolder src = BufferHolder(obj, buffer.PyBUF_FORMAT|buffer.PyBUF_INDIRECT)
+        cdef BufferHolder dest = BufferHolder(self, buffer.PyBUF_FORMAT|buffer.PyBUF_INDIRECT)
+        copy_buffer(&(src.view), &(dest.view), cast) 
+
+    
+    def copy_to(self, obj, cast = False):
+        """
+            copies data to an object via buffer-protocol.
+            obj should have the same shape and format (cast==False) or same itemsize (cast=True)
+        """
+        cdef BufferHolder dest = BufferHolder(obj, buffer.PyBUF_FORMAT|buffer.PyBUF_INDIRECT)
+        cdef BufferHolder src = BufferHolder(self, buffer.PyBUF_FORMAT|buffer.PyBUF_INDIRECT)
+        copy_buffer(&(src.view), &(dest.view), cast) 
 
 
     def __getbuffer__(self, buffer.Py_buffer *view, int flags):
@@ -282,33 +378,6 @@ cdef class IndirectMemory2D:
 #
 
 
-# small helper class for managing of views
-
-cdef class BufferHolder: 
-    cdef buffer.Py_buffer view
-    cdef bint buffer_set
-    def __cinit__(self, obj):
-        buffer.PyObject_GetBuffer(obj, &(self.view), buffer.PyBUF_FORMAT|buffer.PyBUF_ANY_CONTIGUOUS)
-        buffer_set = 1
-
-    def __dealloc__(self):
-        if self.buffer_set:
-            PyBuffer_Release(&(self.view)) 
-
-    cdef Py_ssize_t get_len(self):
-        return self.view.len//self.view.itemsize
-
-    cdef bytes get_format(self):
-        return self.view.format  
-    
-    cdef int get_ndim(self):
-        return self.view.ndim 
-
-    cdef void* get_ptr(self):
-        return self.view.buf
-
-    cdef int get_readonly(self):
-        return self.view.readonly
 
 cdef class BufferCollection2D(IndirectMemory2D):  
     # cdef list views 

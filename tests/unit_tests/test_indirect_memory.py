@@ -79,3 +79,135 @@ class IndirectMemory2D2DPurePython(unittest.TestCase):
         self.assertEqual(len(shape), 2)
         self.assertEqual(shape[0],42)
         self.assertEqual(shape[1],21)
+
+
+
+#### copying part
+
+## copy_from
+    def test_readonly_copy_from(self):      
+        mem  = IndirectMemory2D.create_memory(rows=1, cols=2, format='B', readonly=True)
+        mem2 = IndirectMemory2D.create_memory(rows=1, cols=2, format='B', readonly=False)
+        with self.assertRaises(BufferError) as context:
+            mem.copy_from(mem2)
+        self.assertEqual("copying to readonly buffer", context.exception.args[0])
+
+
+    def test_copy_from_wrong_dim(self):      
+        mem  = IndirectMemory2D.create_memory(rows=1, cols=2, format='B', readonly=False)
+        mem2 = bytearray(b'a')
+        with self.assertRaises(BufferError) as context:
+            mem.copy_from(mem2)
+        self.assertEqual("wrong number of dimensions: expected 2, received 1", context.exception.args[0])
+        
+
+    def test_copy_from_wrong_shape_cols(self):      
+        mem  = IndirectMemory2D.create_memory(rows=1, cols=2, format='B', readonly=False)
+        mem2 = IndirectMemory2D.create_memory(rows=1, cols=3, format='B', readonly=False)
+        with self.assertRaises(BufferError) as context:
+            mem.copy_from(mem2)
+        self.assertEqual("different shapes", context.exception.args[0])
+        
+
+    def test_copy_from_wrong_shape_rows(self):      
+        mem  = IndirectMemory2D.create_memory(rows=1, cols=2, format='B', readonly=False)
+        mem2 = IndirectMemory2D.create_memory(rows=2, cols=2, format='B', readonly=False)
+        with self.assertRaises(BufferError) as context:
+            mem.copy_from(mem2)
+        self.assertEqual("different shapes", context.exception.args[0])
+
+
+    def test_diff_formats_without_cast(self):
+        mem  = IndirectMemory2D.create_memory(rows=1, cols=2, format='B', readonly=False)
+        mem2 = IndirectMemory2D.create_memory(rows=1, cols=2, format='b', readonly=False)
+        with self.assertRaises(BufferError) as context:
+            mem.copy_from(mem2)
+        self.assertEqual("different formats", context.exception.args[0])
+
+
+    def test_diff_formats_with_cast(self):
+        mem  = IndirectMemory2D.create_memory(rows=1, cols=2, format='B', readonly=False)
+        mem2 = IndirectMemory2D.create_memory(rows=1, cols=2, format='b', readonly=False)
+        mem.copy_from(mem2, cast=True)
+        self.assertTrue(True)
+
+    def test_diff_itemsize_with_cast(self):
+        mem  = IndirectMemory2D.create_memory(rows=1, cols=2, format='B', readonly=False)
+        mem2 = IndirectMemory2D.create_memory(rows=1, cols=2, format='i', readonly=False)
+        with self.assertRaises(BufferError) as context:
+            mem.copy_from(mem2, cast=True)
+        self.assertEqual("different itemsizes", context.exception.args[0])
+
+
+    def test_copy_from_indirect_memory(self):
+        mem  = IndirectMemory2D.create_memory(rows=42, cols=21, format='i', readonly=False)
+        mem2 = IndirectMemory2D.create_memory(rows=42, cols=21, format='i', readonly=False)
+        memoryview(mem2)[15,2] = 42
+        mem.copy_from(mem2)
+        self.assertEqual(memoryview(mem)[15,2], 42)
+
+
+
+## copy_to 
+    def test_copy_to_readonly(self):      
+        mem  = IndirectMemory2D.create_memory(rows=1, cols=2, format='B', readonly=False)
+        mem2 = IndirectMemory2D.create_memory(rows=1, cols=2, format='B', readonly=True)
+        with self.assertRaises(BufferError) as context:
+            mem.copy_to(mem2)
+        self.assertEqual("copying to readonly buffer", context.exception.args[0])
+
+
+    def test_copy_to_wrong_dim(self):      
+        mem  = IndirectMemory2D.create_memory(rows=1, cols=2, format='B', readonly=False)
+        mem2 = bytearray(b'a')
+        with self.assertRaises(BufferError) as context:
+            mem.copy_to(mem2)
+        self.assertEqual("wrong number of dimensions: expected 2, received 1", context.exception.args[0])
+        
+
+    def test_copy_to_wrong_shape_cols(self):      
+        mem  = IndirectMemory2D.create_memory(rows=1, cols=2, format='B', readonly=False)
+        mem2 = IndirectMemory2D.create_memory(rows=1, cols=3, format='B', readonly=False)
+        with self.assertRaises(BufferError) as context:
+            mem.copy_to(mem2)
+        self.assertEqual("different shapes", context.exception.args[0])
+        
+
+    def test_copy_to_wrong_shape_rows(self):      
+        mem  = IndirectMemory2D.create_memory(rows=1, cols=2, format='B', readonly=False)
+        mem2 = IndirectMemory2D.create_memory(rows=2, cols=2, format='B', readonly=False)
+        with self.assertRaises(BufferError) as context:
+            mem.copy_to(mem2)
+        self.assertEqual("different shapes", context.exception.args[0])
+
+
+    def test_diff_formats_without_cast_to(self):
+        mem  = IndirectMemory2D.create_memory(rows=1, cols=2, format='B', readonly=False)
+        mem2 = IndirectMemory2D.create_memory(rows=1, cols=2, format='b', readonly=False)
+        with self.assertRaises(BufferError) as context:
+            mem.copy_to(mem2)
+        self.assertEqual("different formats", context.exception.args[0])
+
+
+    def test_diff_formats_with_cast_to(self):
+        mem  = IndirectMemory2D.create_memory(rows=1, cols=2, format='B', readonly=False)
+        mem2 = IndirectMemory2D.create_memory(rows=1, cols=2, format='b', readonly=False)
+        mem.copy_to(mem2, cast=True)
+        self.assertTrue(True)
+
+    def test_diff_itemsize_with_cast_to(self):
+        mem  = IndirectMemory2D.create_memory(rows=1, cols=2, format='B', readonly=False)
+        mem2 = IndirectMemory2D.create_memory(rows=1, cols=2, format='i', readonly=False)
+        with self.assertRaises(BufferError) as context:
+            mem.copy_to(mem2, cast=True)
+        self.assertEqual("different itemsizes", context.exception.args[0])  
+
+
+    def test_copy_to_indirect_memory(self):
+        mem  = IndirectMemory2D.create_memory(rows=42, cols=21, format='i', readonly=False)
+        mem2 = IndirectMemory2D.create_memory(rows=42, cols=21, format='i', readonly=False)
+        memoryview(mem2)[15,2] = 42
+        mem2.copy_to(mem)
+        self.assertEqual(memoryview(mem)[15,2], 42)
+
+ 
