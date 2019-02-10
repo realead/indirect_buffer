@@ -1,8 +1,21 @@
 import unittest
 
-
+from cpython cimport buffer
 from cython cimport view
 from indirect_buffer.buffer_impl cimport BufferCollection2D
+
+
+ 
+
+cdef class BadBuffer:
+
+    def __getbuffer__(self, buffer.Py_buffer *view, int flags):
+        raise BufferError("I am bad buffer")
+
+
+    def __releasebuffer__(self, buffer.Py_buffer *view):
+        pass
+
 
 
 class BufferCollection2DTester(unittest.TestCase): 
@@ -41,5 +54,12 @@ class BufferCollection2DTester(unittest.TestCase):
         with self.assertRaises(BufferError) as context:
             mem = BufferCollection2D([arr], unravel=False)
         self.assertEqual("0. object has dimensionality: 3, but only one-dimensional objects are accepted", context.exception.args[0])
+
+
+    def test_from_bad(self):
+        bad = BadBuffer()
+        with self.assertRaises(BufferError) as context:
+            mem = BufferCollection2D([bad])
+        self.assertEqual("I am bad buffer", context.exception.args[0])
 
 
