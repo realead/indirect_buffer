@@ -32,7 +32,7 @@ To install the module using pip run:
 
 It is possible to uninstall it afterwards via
 
-    pip indirect_buffer cykhash
+    pip indirect_buffer indirect_buffer
 
 You can also install using the setup.py file from the root directory of the project:
 
