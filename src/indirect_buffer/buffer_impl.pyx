@@ -363,7 +363,7 @@ cdef class IndirectMemory2D:
 
 
     @staticmethod
-    def from_ctype_ptr(ptr, Py_ssize_t rows, Py_ssize_t cols, int readonly=False, object memory_nanny=None):
+    def from_ctype_ptr(ptr, Py_ssize_t rows, Py_ssize_t cols, bint readonly=False):
         """
         wraps indirect ctypes pointers (e.g double**), 
         if memory_nanny == None, keeps a reference to the ctypes-objects 
@@ -377,11 +377,10 @@ cdef class IndirectMemory2D:
               info.format[1] == ord('&'):
             raise BufferError("wrong format: "+str(bytes(info.format)))
         cdef char *format_view = info.format+1
-        if memory_nanny is None:
-            memory_nanny = ptr
+        memory_nanny = memoryview(ptr) # lock the buffer and hold a reference
         if info.len < rows:
             raise BufferError("less rows than expected: {0} vs. {1}".format(info.len, rows))
-        return IndirectMemory2D.from_ptr_with_memory_nanny(info.ptr, rows, cols, info.format[1:], readonly, None)
+        return IndirectMemory2D.from_ptr_with_memory_nanny(info.ptr, rows, cols, info.format[1:], readonly, memory_nanny)
 
 
 

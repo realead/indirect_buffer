@@ -43,6 +43,15 @@ class IndirectMemory2D2DPurePython(unittest.TestCase):
          self.assertEqual(data[0] [0], 21) 
 
 
+    def test_from_ctype_ptr_ptr_is_alive(self):
+         data=(ctypes.POINTER(ctypes.c_int)*3)((ctypes.c_int*1)(42), (ctypes.c_int*1)(1), (ctypes.c_int*1)(1))
+         ref_cnt = sys.getrefcount(data)
+         mem = IndirectMemory2D.from_ctype_ptr(data, 2,1)
+         self.assertEqual(ref_cnt+1, sys.getrefcount(data))
+         del mem 
+         self.assertEqual(ref_cnt, sys.getrefcount(data))
+
+
     def test_get_format(self):
         mem = IndirectMemory2D.create_memory(rows=22, cols=33, format='i', readonly=True)
         self.assertEqual(mem.get_format(), b'i')

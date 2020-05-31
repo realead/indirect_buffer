@@ -136,7 +136,7 @@ However, in some scenarios the copying can be avoided by creating a memory view 
 One could also wrap an indirect pointer obtained by `ctypes` via
 
     @staticmethod
-    def from_ctype_ptr(ptr, Py_ssize_t rows, Py_ssize_t cols, int readonly=False, object memory_nanny=None)
+    def from_ctype_ptr(ptr, Py_ssize_t rows, Py_ssize_t cols, bint readonly=False)
 
 for example:
 
@@ -149,7 +149,6 @@ for example:
     view=memoryview(mem)
     print(view[1,0])   # prints 42
 
-Use `memory_nanny` to keep the object responsible for dealocation of underlying pointers alive. If `memory_nanny` is `None` then the reference to  the passed ctypes-object is used.
 
 ### BufferCollection2D
 
