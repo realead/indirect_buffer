@@ -8,24 +8,6 @@ import struct
 
 cdef char *empty_buf=""
 
-# info about buffer, valid as long as exporter is alive
-cdef struct BufferInfo:
-    char *format
-    Py_ssize_t len
-    void *ptr
-
-cdef BufferInfo get_info_via_buffer(obj):
-    cdef BufferInfo info
-    cdef buffer.Py_buffer view
-    buffer.PyObject_GetBuffer(obj, &view, buffer.PyBUF_FORMAT|buffer.PyBUF_ANY_CONTIGUOUS)
-    info.format = view.format
-    info.ptr    = view.buf
-    info.len    = view.len//view.itemsize
-    buffer.PyBuffer_Release(&view)
-    return info
-
-
-
 cdef ensure_bytes(obj):
     if not isinstance(obj, bytes):
         obj=obj.encode('ascii')
@@ -98,6 +80,8 @@ cdef class BufferHolder:
         return self.view.len//self.view.itemsize
 
     cdef bytes get_format(self):
+        if self.view.format == NULL:
+            return b"B"
         return self.view.format  
     
     cdef int get_ndim(self):
@@ -369,18 +353,16 @@ cdef class IndirectMemory2D:
         if memory_nanny == None, keeps a reference to the ctypes-objects 
                           and assumes, that the pointer lives at least as long as the ctypes-object
         """
-        cdef BufferInfo info = get_info_via_buffer(ptr)
-        if    info.format == NULL       or  \
-              info.format[0] == 0       or  \
-              info.format[0] != ord('&') or \
-              info.format[1] == 0       or  \
-              info.format[1] == ord('&'):
-            raise BufferError("wrong format: "+str(bytes(info.format)))
-        cdef char *format_view = info.format+1
-        memory_nanny = memoryview(ptr) # lock the buffer and hold a reference
-        if info.len < rows:
-            raise BufferError("less rows than expected: {0} vs. {1}".format(info.len, rows))
-        return IndirectMemory2D.from_ptr_with_memory_nanny(info.ptr, rows, cols, info.format[1:], readonly, memory_nanny)
+        cdef BufferHolder info = BufferHolder(ptr) 
+        if    info.view.format == NULL       or  \
+              info.view.format[0] == 0       or  \
+              info.view.format[0] != ord('&') or \
+              info.view.format[1] == 0       or  \
+              info.view.format[1] == ord('&'):
+            raise BufferError("wrong format: "+str(info.get_format()))
+        if info.get_len() < rows:
+            raise BufferError("less rows than expected: {0} vs. {1}".format(info.get_len(), rows))
+        return IndirectMemory2D.from_ptr_with_memory_nanny(info.get_ptr(), rows, cols, info.view.format[1:], readonly, info)
 
 
 
