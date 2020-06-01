@@ -70,27 +70,30 @@ cdef class BufferHolder:
     cdef bint buffer_set
     def __cinit__(self, obj, buffer_flags = buffer.PyBUF_FORMAT|buffer.PyBUF_ANY_CONTIGUOUS):
         buffer.PyObject_GetBuffer(obj, &(self.view), buffer_flags)
-        buffer_set = 1
+        self.buffer_set = 1
 
     def __dealloc__(self):
         if self.buffer_set:
             PyBuffer_Release(&(self.view)) 
 
-    cdef Py_ssize_t get_len(self):
+    cpdef bint buffer_is_set(self):
+        return self.buffer_set
+
+    cpdef Py_ssize_t get_len(self):
         return self.view.len//self.view.itemsize
 
-    cdef bytes get_format(self):
+    cpdef bytes get_format(self):
         if self.view.format == NULL:
             return b"B"
         return self.view.format  
     
-    cdef int get_ndim(self):
+    cpdef int get_ndim(self):
         return self.view.ndim 
 
     cdef void* get_ptr(self):
         return self.view.buf
 
-    cdef int get_readonly(self):
+    cpdef int get_readonly(self):
         return self.view.readonly
 
 
