@@ -95,4 +95,33 @@ class BufferCollection2DPurePython(unittest.TestCase):
         self.assertTrue(True)
 
 
+    def test_buffer_locked_unlocked(self):
+        arr1=array.array('i',[2,3])
+        arr2=array.array('i',[2,3])
+        lst = [arr1, arr2]
+        mem = BufferCollection2D(lst)
+        for arr in lst:
+            with self.assertRaises(BufferError) as context:
+                 arr.pop()
+            self.assertEqual('cannot resize an array that is exporting buffers', context.exception.args[0])
+        del mem # unlock
+        for arr in lst:
+            self.assertEqual(arr.pop(), 3)
+
+
+    def test_arrays_referenced_unreferenced(self):
+        arr1=array.array('i',[2,3])
+        arr2=array.array('i',[2,3])
+        lst = [arr1, arr2]
+        cnts = [sys.getrefcount(x) for x in lst]
+        mem = BufferCollection2D(lst)
+        cnts_after = [sys.getrefcount(x)-1 for x in lst]
+        self.assertEqual(cnts, cnts_after)
+
+        del mem # unference
+   
+        cnts_after = [sys.getrefcount(x) for x in lst]
+        self.assertEqual(cnts, cnts_after)
+
+
 
