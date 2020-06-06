@@ -294,13 +294,30 @@ class IndirectMemory2D2DPurePython(unittest.TestCase):
         self.assertEqual(a[1,3], 5)
         self.assertEqual(a[3,1], 6)
 
-    def test_view_from_cols_with_readonly(self):
+    def test_view_from_rows_with_readonly(self):
         import numpy as np
         a =  np.zeros((4,7), order="C")
         mem  = IndirectMemory2D.view_from_rows(a, True)   
         with self.assertRaises(TypeError) as context:
             memoryview(mem)[1,3] = 5
         self.assertEqual("cannot modify read-only memory", context.exception.args[0])
+
+
+    def test_view_from_rows_for_readonly_false(self):
+        import numpy as np
+        a =  np.zeros((4,7), order="C")
+        a.flags.writeable = False
+        with self.assertRaises(ValueError) as context:
+            mem  = IndirectMemory2D.view_from_rows(a, False) 
+        self.assertEqual("buffer source array is read-only", context.exception.args[0])
+
+
+    def test_view_from_rows_for_readonly_true(self):
+        import numpy as np
+        a =  np.ones((4,7), order="C")
+        a.flags.writeable = False
+        mem  = IndirectMemory2D.view_from_rows(a, True) 
+        self.assertEqual(memoryview(mem)[0,0], 1.0)
 
 
     def test_view_from_rows_from_view(self):
@@ -406,6 +423,23 @@ class IndirectMemory2D2DPurePython(unittest.TestCase):
         self.assertEqual("cannot modify read-only memory", context.exception.args[0])
 
 
+    def test_view_from_cols_for_readonly_false(self):
+        import numpy as np
+        a =  np.zeros((4,7), order="F")
+        a.flags.writeable = False
+        with self.assertRaises(ValueError) as context:
+            mem  = IndirectMemory2D.view_from_columns(a, False) 
+        self.assertEqual("buffer source array is read-only", context.exception.args[0])
+
+
+    def test_view_from_cols_for_readonly_true(self):
+        import numpy as np
+        a =  np.ones((4,7), order="F")
+        a.flags.writeable = False
+        mem  = IndirectMemory2D.view_from_columns(a, True) 
+        self.assertEqual(memoryview(mem)[0,0], 1.0)
+
+
     def test_view_from_cols_from_view(self):
         import numpy as np
         a=np.arange(12).reshape((3,4), order="F")
@@ -418,7 +452,7 @@ class IndirectMemory2D2DPurePython(unittest.TestCase):
         self.assertEqual(a[0,2], 42)
 
 
-    def test_view_from_rows_from_view_wrong_mem_layout(self):
+    def test_view_from_cols_from_view_wrong_mem_layout(self):
         import numpy as np
         a=np.arange(24).reshape((4,6))
         b=a[0::2, 0::2]

@@ -373,15 +373,18 @@ cdef class IndirectMemory2D:
         """
         creates a view in indirect memory layout of an 2d-array in row-major-order
         """
-        cdef BufferHolder info = BufferHolder(array2d, buffer.PyBUF_FORMAT|buffer.PyBUF_STRIDES)
+        flags = buffer.PyBUF_FORMAT|buffer.PyBUF_STRIDES
+        if not readonly:
+           flags |= buffer.PyBUF_WRITABLE
+        cdef BufferHolder info = BufferHolder(array2d, flags)
         #check buffer
         if info.get_ndim()>2:
            raise BufferError("expected at most 2 but found {0} dimensions".format(info.get_ndim()))
         if info.view.shape==NULL or info.view.strides==NULL:
            raise BufferError("requested information was not returned by buffer-object") 
-        cdef Py_ssize_t rows, cols, row_stride, col_stride
-
+        
         # get needed information
+        cdef Py_ssize_t rows, cols, row_stride, col_stride
         if info.get_ndim()==1:
            rows = 1
            cols = info.view.shape[0]
@@ -416,15 +419,18 @@ cdef class IndirectMemory2D:
         """
         creates a view in indirect memory layout of an 2d-array in row-major-order
         """
-        cdef BufferHolder info = BufferHolder(array2d, buffer.PyBUF_FORMAT|buffer.PyBUF_STRIDES)
+        flags = buffer.PyBUF_FORMAT|buffer.PyBUF_STRIDES
+        if not readonly:
+           flags |= buffer.PyBUF_WRITABLE
+        cdef BufferHolder info = BufferHolder(array2d, flags)
         #check buffer
         if info.get_ndim()>2:
            raise BufferError("expected at most 2 but found {0} dimensions".format(info.get_ndim()))
         if info.view.shape==NULL or info.view.strides==NULL:
-           raise BufferError("requested information was not returned by buffer-object") 
-        cdef Py_ssize_t rows, cols, row_stride, col_stride
+           raise BufferError("requested information was not returned by buffer-object")
 
-        # get needed information
+        # get needed information 
+        cdef Py_ssize_t rows, cols, row_stride, col_stride
         if info.get_ndim()==1:
            rows = info.view.shape[0]
            cols = 1
