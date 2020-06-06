@@ -369,7 +369,7 @@ cdef class IndirectMemory2D:
 
 
     @staticmethod
-    def view_from_rows(array2d, bint readonly=False):
+    cdef IndirectMemory2D cy_view_from_rows(object array2d, bint readonly=False):
         """
         creates a view in indirect memory layout of an 2d-array in row-major-order
         """
@@ -413,9 +413,12 @@ cdef class IndirectMemory2D:
         
         return IndirectMemory2D.from_ptr_with_memory_nanny(nanny.ptr, rows, cols, info.view.format, readonly, (info, nanny))
 
+    @staticmethod
+    def view_from_rows(array2d, bint readonly=False):
+        return IndirectMemory2D.cy_view_from_rows(array2d, readonly)
 
     @staticmethod
-    def view_from_columns(array2d, bint readonly=False):
+    cdef IndirectMemory2D cy_view_from_columns(object array2d, bint readonly=False):
         """
         creates a view in indirect memory layout of an 2d-array in row-major-order
         """
@@ -458,6 +461,10 @@ cdef class IndirectMemory2D:
             ptr[i] = <void*>((<char*>(info.view.buf))+i*col_stride)
         
         return IndirectMemory2D.from_ptr_with_memory_nanny(nanny.ptr, cols, rows, info.view.format, readonly, (info, nanny))
+
+    @staticmethod
+    def view_from_columns(array2d, bint readonly=False):
+        return IndirectMemory2D.cy_view_from_columns(array2d, readonly)
 
 #
 #

@@ -153,7 +153,39 @@ class IndirectMemoryTester(unittest.TestCase):
        orig[11, 25] = 42
        mem.copy_from(orig)
        mem.copy_to(copy)
-       self.assertEqual(copy[11, 25], 42)    
+       self.assertEqual(copy[11, 25], 42) 
+
+
+    def test_view_from_rows(self):
+        import numpy as np
+        a =  np.zeros((7,4), order="C")
+        a[1,2] = 21
+        a[2,1] = 42
+        mem  = IndirectMemory2D.cy_view_from_rows(a)
+        self.assertEqual(mem.shape[0], 7)
+        self.assertEqual(mem.shape[1], 4)
+        self.assertEqual(memoryview(mem)[1,2], 21)
+        self.assertEqual(memoryview(mem)[2,1], 42)
+        memoryview(mem)[1,3] = 5
+        memoryview(mem)[3,1] = 6
+        self.assertEqual(a[1,3], 5)
+        self.assertEqual(a[3,1], 6) 
+
+
+    def test_view_from_cols(self):
+        import numpy as np
+        a =  np.zeros((4,7), order="F")
+        a[1,2] = 21
+        a[2,1] = 42
+        mem  = IndirectMemory2D.cy_view_from_columns(a)
+        self.assertEqual(mem.shape[0], 7) #dimensions swapped
+        self.assertEqual(mem.shape[1], 4) #dimensions swapped
+        self.assertEqual(memoryview(mem)[1,2], 42) #dimensions swapped
+        self.assertEqual(memoryview(mem)[2,1], 21) #dimensions swapped
+        memoryview(mem)[1,3] = 5
+        memoryview(mem)[3,1] = 6
+        self.assertEqual(a[1,3], 6)  #dimensions swapped
+        self.assertEqual(a[3,1], 5)  #dimensions swapped  
 
 
 

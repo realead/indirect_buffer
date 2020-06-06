@@ -25,6 +25,11 @@ cdef class IndirectMemory2D:
     @staticmethod
     cdef IndirectMemory2D from_ptr_with_memory_nanny(void* ptr, Py_ssize_t rows, Py_ssize_t cols, object format, int readonly, object memory_nanny)
 
+    @staticmethod
+    cdef IndirectMemory2D cy_view_from_rows(object array2d, bint readonly=*)
+    @staticmethod
+    cdef IndirectMemory2D cy_view_from_columns(object array2d, bint readonly=*)
+
     # private:
     cdef void __set_dimensions(self, Py_ssize_t rows, Py_ssize_t cols)
     cdef void __set_format(self, object format)
