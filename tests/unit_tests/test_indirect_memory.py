@@ -221,6 +221,28 @@ class IndirectMemory2D2DPurePython(unittest.TestCase):
         self.assertEqual(memoryview(mem)[15,2], 42)
 
 ##  view_from rows:
+    def test_view_from_rows_refcount(self):
+        import numpy as np
+        a = np.zeros((3,4), order="C")
+        cnt = sys.getrefcount(a)
+        mem  = IndirectMemory2D.view_from_rows(a)
+        self.assertEqual(cnt+1, sys.getrefcount(a))
+        del mem
+        self.assertEqual(cnt, sys.getrefcount(a))
+
+
+    def test_view_from_rows_bufferlocked(self):
+        import numpy as np
+        a = np.zeros((3,4), order="C")
+        mem  = IndirectMemory2D.view_from_rows(a)
+        with self.assertRaises(ValueError) as context:
+            a.resize((55,1))
+        self.assertTrue("cannot resize" in context.exception.args[0])
+        del mem
+        a.resize((55,1))
+        self.assertEqual(a.shape[0], 55)
+
+
     def test_view_from_rows_wrong_mem_layout(self):
         import numpy as np
         a = np.zeros((3,4), order="F")
@@ -294,6 +316,27 @@ class IndirectMemory2D2DPurePython(unittest.TestCase):
         self.assertEqual("rows of the buffer-object aren't contiguous", context.exception.args[0])
 
 ##  view_from colums:
+    def test_view_from_cols_refcount(self):
+        import numpy as np
+        a = np.zeros((3,4), order="F")
+        cnt = sys.getrefcount(a)
+        mem  = IndirectMemory2D.view_from_columns(a)
+        self.assertEqual(cnt+1, sys.getrefcount(a))
+        del mem
+        self.assertEqual(cnt, sys.getrefcount(a))
+
+
+    def test_view_from_cols_bufferlocked(self):
+        import numpy as np
+        a = np.zeros((3,4), order="F")
+        mem  = IndirectMemory2D.view_from_columns(a)
+        with self.assertRaises(ValueError) as context:
+            a.resize((55,1))
+        self.assertTrue("cannot resize" in context.exception.args[0])
+        del mem
+        a.resize((55,1))
+        self.assertEqual(a.shape[0], 55)
+
     def test_view_from_cols_wrong_mem_layout(self):
         import numpy as np
         a = np.zeros((3,4), order="C")
