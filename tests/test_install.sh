@@ -24,6 +24,8 @@ else
     (cd .. && python setup.py install)
 fi;
 
+pip install numpy
+
 echo "Installed packages:"
 pip freeze
 
