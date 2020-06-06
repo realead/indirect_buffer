@@ -129,7 +129,26 @@ The indirect memory layout isn't supported by numpy, so the data needs to be cop
 
 `obj` should implement the buffer-protocol and have the same shape as the `IndirectMemory2D`-object, the same `format` if `cast==False` or the same itemsize if `cast==True`.
 
-However, in some scenarios the copying can be avoided by creating a memory view via `BufferCollection2D` (see below).
+However, in some scenarios the copying can be avoided by creating a memory view via `BufferCollection2D` (see below) or via `IndirectMemory2D.view_from_rows()` or `IndirectMemory2D.view_from_rows()`.
+
+
+#### views from 2D-arrays with direct memory layout
+
+For example: 
+
+    import numpy as np
+    a =  np.zeros((7,4), order="C") #rows must be contiguous
+    mem  = IndirectMemory2D.view_from_rows(a, readonly=False) # throws if a is not writable
+    memoryview(mem)[0,1] = 6.0
+    print(a[0,1]) # prints 6.0
+
+or 
+
+    import numpy as np
+    a =  np.zeros((7,4), order="F") #cols must be contiguous
+    mem  = IndirectMemory2D.view_from_columns(a, readonly=False) # throws if a is not writable
+    memoryview(mem)[1,0] = 6.0 # rows and cols are switched in IndirectMemory2D!
+    print(a[0,1]) # prints 6.0
 
 #### with ctypes-pointers
 
@@ -148,6 +167,8 @@ for example:
     mem.reinterpret_data('i') #  memoryview doesn't understand `<i`, but other consumers might do
     view=memoryview(mem)
     print(view[1,0])   # prints 42
+
+
 
 
 ### BufferCollection2D
@@ -191,6 +212,13 @@ For testing of the version from github run:
 For keeping the the virtual enviroment after the tests:
 
     sh test_install.sh p3 local keep
+
+Or 
+
+    sh test_in_active_env.sh
+
+to install and to test in the currently active environment.
+
 
 ## Versions:
 
