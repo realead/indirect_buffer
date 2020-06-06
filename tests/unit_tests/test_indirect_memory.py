@@ -220,7 +220,7 @@ class IndirectMemory2D2DPurePython(unittest.TestCase):
         mem2.copy_to(mem)
         self.assertEqual(memoryview(mem)[15,2], 42)
 
-
+##  view_from rows:
     def test_view_from_rows_wrong_mem_layout(self):
         import numpy as np
         a = np.zeros((3,4), order="F")
@@ -293,4 +293,77 @@ class IndirectMemory2D2DPurePython(unittest.TestCase):
             mem  = IndirectMemory2D.view_from_rows(b)
         self.assertEqual("rows of the buffer-object aren't contiguous", context.exception.args[0])
 
- 
+##  view_from colums:
+    def test_view_from_cols_wrong_mem_layout(self):
+        import numpy as np
+        a = np.zeros((3,4), order="C")
+        with self.assertRaises(BufferError) as context:
+            mem  = IndirectMemory2D.view_from_columns(a)
+        self.assertEqual("columns of the buffer-object aren't contiguous", context.exception.args[0])
+
+    def test_view_from_cols_too_many_dims(self):
+        import numpy as np
+        a = np.zeros((3,4,3), order="F")
+        with self.assertRaises(BufferError) as context:
+            mem  = IndirectMemory2D.view_from_columns(a)
+        self.assertEqual("expected at most 2 but found 3 dimensions", context.exception.args[0])
+
+
+    def test_view_from_one_col_1d(self):
+        a = array.array("i", [1,2,3,4])
+        mem  = IndirectMemory2D.view_from_columns(a)
+        self.assertEqual(mem.shape[0], 1)
+        self.assertEqual(mem.shape[1], 4)
+        self.assertEqual(memoryview(mem)[0,2], 3)
+        memoryview(mem)[0,2] = 42
+        self.assertEqual(a[2], 42)
+
+
+    def test_view_from_one_col_2d(self):
+        import numpy as np
+        a = np.array([[1],[2],[3],[4]], order="F")
+        mem  = IndirectMemory2D.view_from_columns(a)
+        self.assertEqual(mem.shape[0], 1) #dimensions swapped
+        self.assertEqual(mem.shape[1], 4) #dimensions swapped
+        self.assertEqual(memoryview(mem)[0,2], 3) #dimensions swapped
+        memoryview(mem)[0,2] = 42 #dimensions swapped
+        self.assertEqual(a[2,0], 42)
+
+
+    def test_view_from_cols(self):
+        import numpy as np
+        a =  np.zeros((4,7), order="F")
+        a[1,2] = 21
+        a[2,1] = 42
+        mem  = IndirectMemory2D.view_from_columns(a)
+        self.assertEqual(mem.shape[0], 7) #dimensions swapped
+        self.assertEqual(mem.shape[1], 4) #dimensions swapped
+        self.assertEqual(memoryview(mem)[1,2], 42) #dimensions swapped
+        self.assertEqual(memoryview(mem)[2,1], 21) #dimensions swapped
+        memoryview(mem)[1,3] = 5
+        memoryview(mem)[3,1] = 6
+        self.assertEqual(a[1,3], 6)  #dimensions swapped
+        self.assertEqual(a[3,1], 5)  #dimensions swapped
+
+
+    def test_view_from_cols_from_view(self):
+        import numpy as np
+        a=np.arange(12).reshape((3,4), order="F")
+        b=a[:, 0::2]
+        mem  = IndirectMemory2D.view_from_columns(b)
+        self.assertEqual(mem.shape[0], 2) #dimensions swapped
+        self.assertEqual(mem.shape[1], 3) #dimensions swapped
+        self.assertEqual(memoryview(mem)[1,0], 6) #dimensions swapped
+        memoryview(mem)[1,0] = 42         #dimensions swapped
+        self.assertEqual(a[0,2], 42)
+
+
+    def test_view_from_rows_from_view_wrong_mem_layout(self):
+        import numpy as np
+        a=np.arange(24).reshape((4,6))
+        b=a[0::2, 0::2]
+        with self.assertRaises(BufferError) as context:
+            mem  = IndirectMemory2D.view_from_columns(b)
+        self.assertEqual("columns of the buffer-object aren't contiguous", context.exception.args[0])
+
+
