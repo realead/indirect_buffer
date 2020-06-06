@@ -294,6 +294,14 @@ class IndirectMemory2D2DPurePython(unittest.TestCase):
         self.assertEqual(a[1,3], 5)
         self.assertEqual(a[3,1], 6)
 
+    def test_view_from_cols_with_readonly(self):
+        import numpy as np
+        a =  np.zeros((4,7), order="C")
+        mem  = IndirectMemory2D.view_from_rows(a, True)   
+        with self.assertRaises(TypeError) as context:
+            memoryview(mem)[1,3] = 5
+        self.assertEqual("cannot modify read-only memory", context.exception.args[0])
+
 
     def test_view_from_rows_from_view(self):
         import numpy as np
@@ -387,6 +395,15 @@ class IndirectMemory2D2DPurePython(unittest.TestCase):
         memoryview(mem)[3,1] = 6
         self.assertEqual(a[1,3], 6)  #dimensions swapped
         self.assertEqual(a[3,1], 5)  #dimensions swapped
+
+
+    def test_view_from_cols_with_readonly(self):
+        import numpy as np
+        a =  np.zeros((4,7), order="F")
+        mem  = IndirectMemory2D.view_from_columns(a, True)   
+        with self.assertRaises(TypeError) as context:
+            memoryview(mem)[1,3] = 5
+        self.assertEqual("cannot modify read-only memory", context.exception.args[0])
 
 
     def test_view_from_cols_from_view(self):
