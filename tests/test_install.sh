@@ -13,18 +13,18 @@ fi;
 #activate environment
 . "$ENV_DIR/bin/activate"
 
-#prepare:
-pip install cython
-
+#check clean install:
 if [ "$2" = "from-github" ]; then
     echo "Installing setup.py from github..."
     pip install https://github.com/realead/indirect_buffer/zipball/master
 else
-    echo "Installing local setup.py..."
-    (cd .. && python setup.py install)
+    echo "Installing local setup.py via pip..."
+    (cd .. && pip install .)
 fi;
 
 pip install numpy
+pip install cython
+
 
 echo "Installed packages:"
 pip freeze
